@@ -66,8 +66,10 @@ Deno.writeTextFile(
 				`.date{background:#D1271C;flex-grow:2}`,
 				`.pub{background:#D1271C;align-self:flex-end}`,
 				`.priv{background:#4C0297}`,
+				`.t0{flex-grow:2;height:5px;background:dodgerblue}`,
+				`.t1{flex-grow:2;height:5px;background:blue}`,
 				`.date:hover{background:dodgerblue}`,
-				`#title{color:dodgerblue;font-size:xx-large;top:0;right:0;position:fixed}`,
+				`#title{color:dodgerblue;background:white;font-size:xx-large;top:0;right:0;position:fixed}`,
 			),
 		),
 		html(
@@ -91,18 +93,19 @@ Deno.writeTextFile(
 							(allPrivate.get(key) ?? 0),
 						0,
 					);
+					const f = new Intl.DateTimeFormat("fr", {
+						dateStyle: "full",
+					});
 					yield html("h2", `${year} (${nb})`);
 					yield html(
 						"div",
 						html(
 							"div.timeline",
-							keys.map((date) =>
-								htmlAttr`div.date.pub style=height:${
-									allPublic.get(date) + ""
-								}px title='${date} (${
-									allPublic.get(date) + ""
-								})'`()
-							),
+							keys.map((date) => {
+								const d = f.format(new Date(date));
+								const v = allPublic.get(date) + "";
+								return htmlAttr`div.date.pub style=height:${v}px title='${d} (${v})'`();
+							}),
 						),
 					);
 					yield html(
@@ -110,12 +113,21 @@ Deno.writeTextFile(
 						html(
 							"div.timeline",
 							keys.map((date) =>
-								htmlAttr`div.date.priv style=height:${
-									allPrivate.get(date) + ""
-								}px title='${date} (${
-									allPrivate.get(date) + ""
-								})'`()
+								new Date(date).getDay()
+									? html("div.t0")
+									: html("div.t1")
 							),
+						),
+					);
+					yield html(
+						"div",
+						html(
+							"div.timeline",
+							keys.map((date) => {
+								const d = f.format(new Date(date));
+								const v = allPrivate.get(date) + "";
+								return htmlAttr`div.date.priv style=height:${v}px title='${d} (${v})'`();
+							}),
 						),
 					);
 				}
