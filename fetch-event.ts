@@ -1,5 +1,3 @@
-// https://actionpopulaire.fr/api/groupes/dffe29a7-2fcb-424e-bb3d-b1d2b4623aaf/evenements/passes/?page=1&page_size=3
-
 import { loadIDs } from "./lib.ts";
 import { exists } from "https://deno.land/std@0.224.0/fs/mod.ts";
 
@@ -10,7 +8,7 @@ for (const id of await loadIDs()) {
 
 	console.log(id);
 	const url =
-		`https://actionpopulaire.fr/api/groupes/${id}/evenements/passes/`;
+		`https://actionpopulaire.fr/api/groupes/${id}/evenements/passes/?page_size=10000`;
 	await Deno.writeTextFile(
 		path,
 		await fetch(url).then((r) => r.text()),

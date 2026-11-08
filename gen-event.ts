@@ -5,33 +5,47 @@ import {
 	htmlSec,
 } from "https://jsr.io/@huguesguilleus/html/1.1.1/html.ts";
 import { loadIDs } from "./lib.ts";
+import { exists } from "https://deno.land/std@0.224.0/fs/mod.ts";
 
 // Merge events
-const types = new Map<string, number>();
-const allPublic = new Map<string, number>();
-const allPrivate = new Map<string, number>();
+const ids = new Map<
+	string,
+	{ isPublic: boolean; date: string; type: string }
+>();
 for (const id of await loadIDs()) {
-	const { results = [] } = JSON.parse(
-		await Deno.readTextFile("data-event/" + id + ".json"),
-	);
+	const path = "data-event/" + id + ".json";
+	if (!await exists(path)) continue;
+	const { results = [] } = JSON.parse(await Deno.readTextFile(path));
 	for (const event of results) {
-		types.set(
-			event.subtype.label,
-			(types.get(event.subtype.label) ?? 0) + 1,
-		);
+		const type = event.subtype.label;
 		const date = event.startTime.replace(/T.*/, "");
+		let isPublic: boolean = false;
 		switch (event.subtype.type) {
 			case "M":
 			case "A":
-				allPublic.set(date, (allPublic.get(date) ?? 0) + 1);
+				isPublic = true;
 				break;
 			case "G":
 			case "O":
-				allPrivate.set(date, (allPrivate.get(date) ?? 0) + 1);
+				isPublic = false;
 				break;
 			default:
 				console.log("unknown event.subtype.type", event.subtype.type);
 		}
+		ids.set(event.id, { isPublic, date, type });
+	}
+}
+
+// Extract for each type and event per date.
+const types = new Map<string, number>();
+const allPublic = new Map<string, number>();
+const allPrivate = new Map<string, number>();
+for (const { isPublic, date, type } of ids.values()) {
+	types.set(type, (types.get(type) ?? 0) + 1);
+	if (isPublic) {
+		allPublic.set(date, (allPublic.get(date) ?? 0) + 1);
+	} else {
+		allPrivate.set(date, (allPrivate.get(date) ?? 0) + 1);
 	}
 }
 console.table(Array.from(types.entries()).sort(([_1, a], [_, b]) => b - a));
@@ -51,6 +65,9 @@ for (
 
 // Generate
 const allKeys = Array.from(allPublic.keys()).sort();
+function scale(value: number): string {
+	return Math.round(value / 3) + "px";
+}
 Deno.writeTextFile(
 	"public/event.html",
 	htmlRoot(
@@ -103,8 +120,10 @@ Deno.writeTextFile(
 							"div.timeline",
 							keys.map((date) => {
 								const d = f.format(new Date(date));
-								const v = allPublic.get(date) + "";
-								return htmlAttr`div.date.pub style=height:${v}px title='${d} (${v})'`();
+								const v = allPublic.get(date) ?? 0;
+								return htmlAttr`div.date.pub style=height:${
+									scale(v)
+								} title='${d} (${v + ""})'`();
 							}),
 						),
 					);
@@ -125,8 +144,10 @@ Deno.writeTextFile(
 							"div.timeline",
 							keys.map((date) => {
 								const d = f.format(new Date(date));
-								const v = allPrivate.get(date) + "";
-								return htmlAttr`div.date.priv style=height:${v}px title='${d} (${v})'`();
+								const v = allPrivate.get(date) ?? 0;
+								return htmlAttr`div.date.priv style=height:${
+									scale(v)
+								} title='${d} (${v + ""})'`();
 							}),
 						),
 					);

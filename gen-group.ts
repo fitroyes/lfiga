@@ -1,4 +1,4 @@
-import { stringify } from "jsr:@std/csv";
+import { stringify } from "https://jsr.io/@std/csv/1.0.6/mod.ts";
 import { loadIDs } from "./lib.ts";
 import { H, html } from "./html.ts";
 import { BD } from "./bd.ts";
@@ -17,47 +17,52 @@ type Group = {
 
 const index = new Map<string, Group[]>();
 for (const id of await loadIDs()) {
-	const {
-		name,
-		isCertified,
-		subtypes,
-		location: { departement, city, zip },
-		contact,
-		facts: { creationDate, activeMemberCount: size },
-	} = JSON.parse(
-		await Deno.readTextFile("data/" + id + ".json"),
-	);
+	try {
+		const {
+			name,
+			isCertified,
+			subtypes,
+			location: { departement, city, zip },
+			contact,
+			facts: { creationDate, activeMemberCount: size },
+		} = JSON.parse(
+			await Deno.readTextFile("data/" + id + ".json"),
+		);
 
-	let d = index.get(departement);
-	if (!d) {
-		index.set(departement, d = []);
-	}
-
-	let type = "";
-	for (const subtype of subtypes) {
-		switch (subtype) {
-			case "Groupe professionnel":
-				type += "pro ";
-				break;
-			case "Groupe lycéens et étudiants":
-				type += "jeune ";
-				break;
-			default:
-				type += "x ";
+		let d = index.get(departement);
+		if (!d) {
+			index.set(departement, d = []);
 		}
-	}
 
-	d.push({
-		id,
-		name,
-		type,
-		contacts: (contact || {}).name || "",
-		isCertified,
-		size,
-		city,
-		zip,
-		creationDate,
-	});
+		let type = "";
+		for (const subtype of subtypes) {
+			switch (subtype) {
+				case "Groupe professionnel":
+					type += "pro ";
+					break;
+				case "Groupe lycéens et étudiants":
+					type += "jeune ";
+					break;
+				default:
+					type += "x ";
+			}
+		}
+
+		d.push({
+			id,
+			name,
+			type,
+			contacts: (contact || {}).name || "",
+			isCertified,
+			size,
+			city,
+			zip,
+			creationDate,
+		});
+	} catch (e) {
+		console.error("Failed to process id:", id, e);
+		continue;
+	}
 }
 
 await Deno.mkdir("public", { recursive: true });
